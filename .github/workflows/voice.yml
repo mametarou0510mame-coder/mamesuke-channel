@@ -1,0 +1,31 @@
+name: Voice (VOICEVOX)
+# 台本(scripts_txt/*.tsv)が変わったら、ずんだもんの声で音声を作って voices/ にコミットする
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "scripts_txt/**"
+      - "scripts/tts.py"
+permissions:
+  contents: write
+jobs:
+  make:
+    runs-on: ubuntu-latest
+    services:
+      voicevox:
+        image: voicevox/voicevox_engine:cpu-ubuntu20.04-latest
+        ports:
+          - 50021:50021
+    steps:
+      - uses: actions/checkout@v4
+      - name: Wait for VOICEVOX
+        run: for i in $(seq 1 60); do curl -sf http://127.0.0.1:50021/version && break; sleep 5; done
+      - name: Make voices
+        run: python scripts/tts.py
+      - name: Commit voices
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add voices
+          git diff --cached --quiet || git commit -m "voices: VOICEVOX:ずんだもん で音声を生成"
+          git push
