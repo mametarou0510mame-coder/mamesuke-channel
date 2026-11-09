@@ -23,6 +23,9 @@ def synth(text, out):
     q["postPhonemeLength"] = 0.15
     with open(out, "wb") as f:
         f.write(post("/synthesis", {"speaker": SPEAKER}, q))
+    # 口パク用: 音素ごとのタイミングを保存
+    with open(out[:-4] + ".json", "w", encoding="utf-8") as f:
+        json.dump(q, f, ensure_ascii=False)
 
 
 for tsv in sorted(glob.glob("scripts_txt/*.tsv")):
