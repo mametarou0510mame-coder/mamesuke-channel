@@ -114,9 +114,9 @@ def fur(o, n, length, align=(0, 0, 0), child=10, rad=0.0034, clump=0.35, rough=0
     o.show_instancer_for_render = True
 
 # ---------------- character ----------------
-EYE_L, EYE_R = (0.19, -0.415, 0.05), (-0.19, -0.415, 0.05)
+EYE_L, EYE_R = (0.19, -0.445, 0.04), (-0.19, -0.445, 0.04)
 NOSE = (0, -0.625, -0.07)
-EX_FACE = [(EYE_L, 0.145), (EYE_R, 0.145), (NOSE, 0.08)]
+EX_FACE = [(EYE_L, 0.165), (EYE_R, 0.165), (NOSE, 0.08)]
 
 core = sph("core", (0, 0, 0), (0.43, 0.44, 0.41), [PS, PH], head)
 fur(core, 2600, 0.07, (0, 0.15, -0.1), excl=EX_FACE, seed=1)
@@ -193,8 +193,8 @@ def light(name, loc, power, size, color=(1, 1, 1)):
     c = o.constraints.new('TRACK_TO'); c.target = target; c.track_axis = 'TRACK_NEGATIVE_Z'; c.up_axis = 'UP_Y'
 light("key", (-1.8, -3.2, 3.0), 260, 2.5, (1.0, 0.96, 0.9))
 light("fill", (2.2, -2.6, 1.6), 80, 3.0, (0.85, 0.92, 1.0))
-light("rimL", (-1.6, 1.6, 2.6), 220, 1.0, (0.4, 0.65, 1.0))
-light("rimR", (1.6, 1.6, 2.6), 220, 1.0, (0.4, 0.65, 1.0))
+light("rimL", (-1.6, 1.6, 2.6), 120, 1.0, (0.4, 0.65, 1.0))
+light("rimR", (1.6, 1.6, 2.6), 120, 1.0, (0.4, 0.65, 1.0))
 
 cam_d = bpy.data.cameras.new("cam"); cam = bpy.data.objects.new("cam", cam_d); sc.collection.objects.link(cam)
 cam.location = (0, -4.3, 1.30); cam_d.lens = 50
@@ -235,7 +235,7 @@ SLOW = smooth(OPEN, 5)
 REST = 0.10                                   # mouth slightly open at rest (friendly look)
 blinks = [int(1.3 * FPS), int((LEAD + VDUR + 0.25) * FPS)]
 def lid_at(f):
-    a = -22.0
+    a = -35.0
     for b in blinks:
         d = f - b
         if 0 <= d < 6: a = max(a, [50, 92, 95, 80, 45, 20][d])
