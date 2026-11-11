@@ -42,7 +42,7 @@ def proj(nt):
     """colour from the real front photo, projected along Y in head space"""
     tc = nt.nodes.new("ShaderNodeTexCoord"); tc.object = head
     sep = nt.nodes.new("ShaderNodeSeparateXYZ"); nt.links.new(tc.outputs["Object"], sep.inputs[0])
-    mu = nt.nodes.new("ShaderNodeMath"); mu.operation = 'MULTIPLY_ADD'; mu.inputs[1].default_value = 0.5298; mu.inputs[2].default_value = 0.5018
+    mu = nt.nodes.new("ShaderNodeMath"); mu.operation = 'MULTIPLY_ADD'; mu.inputs[1].default_value = 0.48; mu.inputs[2].default_value = 0.5018
     mv = nt.nodes.new("ShaderNodeMath"); mv.operation = 'MULTIPLY_ADD'; mv.inputs[1].default_value = 0.3972; mv.inputs[2].default_value = 0.7095
     nt.links.new(sep.outputs["X"], mu.inputs[0]); nt.links.new(sep.outputs["Z"], mv.inputs[0])
     cb = nt.nodes.new("ShaderNodeCombineXYZ"); nt.links.new(mu.outputs[0], cb.inputs["X"]); nt.links.new(mv.outputs[0], cb.inputs["Y"])
@@ -55,7 +55,7 @@ _h = [n for n in PH.node_tree.nodes if n.type == 'BSDF_HAIR_PRINCIPLED'][0]; PH.
 WHITE_C, TAN_C = (0.86, 0.82, 0.74), (0.62, 0.40, 0.20)
 M_WHITE, M_TAN = P("white", WHITE_C, 0.9), P("tan", TAN_C, 0.9)
 H_WHITE, H_TAN = HAIR("h_white", (0.93, 0.90, 0.84)), HAIR("h_tan", (0.66, 0.44, 0.24))
-M_EYE = P("eye", (0.012, 0.008, 0.006), 0.03)
+M_EYE = P("eye", (0.004, 0.003, 0.002), 0.08)
 M_NOSE = P("nose", (0.01, 0.01, 0.01), 0.25)
 M_MOUTH = P("mouth", (0.10, 0.02, 0.025), 0.6)
 M_TONGUE = P("tongue", (0.85, 0.36, 0.42), 0.4)
@@ -116,22 +116,22 @@ def fur(o, n, length, align=(0, 0, 0), child=10, rad=0.0034, clump=0.35, rough=0
 # ---------------- character ----------------
 EYE_L, EYE_R = (0.19, -0.415, 0.05), (-0.19, -0.415, 0.05)
 NOSE = (0, -0.625, -0.07)
-EX_FACE = [(EYE_L, 0.12), (EYE_R, 0.12), (NOSE, 0.08)]
+EX_FACE = [(EYE_L, 0.145), (EYE_R, 0.145), (NOSE, 0.08)]
 
-core = sph("core", (0, 0, 0), (0.50, 0.46, 0.46), [PS, PH], head)
-fur(core, 2600, 0.09, (0, 0.15, -0.1), excl=EX_FACE, seed=1)
+core = sph("core", (0, 0, 0), (0.43, 0.44, 0.41), [PS, PH], head)
+fur(core, 2600, 0.07, (0, 0.15, -0.1), excl=EX_FACE, seed=1)
 for sx, nm in ((1, "L"), (-1, "R")):
-    p = sph("patch" + nm, (0.29 * sx, -0.10, 0.08), (0.24, 0.38, 0.36), [PS, PH], head)
-    fur(p, 2200, 0.085, (0.1 * sx, 0.1, -0.15), excl=EX_FACE, seed=2 + (sx > 0))
-    ear = sph("ear" + nm, (0.50 * sx, 0.03, -0.12), (0.14, 0.20, 0.33), [PS, PH], head, rot=(0, -0.22 * sx, 0))
-    fur(ear, 1800, 0.20, (0.05 * sx, 0, -0.9), child=14, clump=0.5, rough=0.035, seed=5 + (sx > 0), normal=0.6)
-    eye = sph("eye" + nm, EYE_L if sx > 0 else EYE_R, (0.085, 0.085, 0.085), [M_EYE], head)
+    p = sph("patch" + nm, (0.25 * sx, -0.10, 0.07), (0.21, 0.37, 0.33), [PS, PH], head)
+    fur(p, 2200, 0.07, (0.1 * sx, 0.1, -0.15), excl=EX_FACE, seed=2 + (sx > 0))
+    ear = sph("ear" + nm, (0.44 * sx, 0.05, -0.10), (0.10, 0.17, 0.30), [PS, PH], head, rot=(0, -0.22 * sx, 0))
+    fur(ear, 2000, 0.11, (0.05 * sx, 0, -0.9), child=14, clump=0.5, rough=0.035, seed=5 + (sx > 0), normal=0.6)
+    eye = sph("eye" + nm, EYE_L if sx > 0 else EYE_R, (0.092, 0.092, 0.092), [M_EYE], head)
 EARS = [bpy.data.objects["earL"], bpy.data.objects["earR"]]
 
 # eyelids: upper hemisphere, rotate about X (10deg open .. 95deg closed)
 LIDS = []
 for nm, loc in (("L", EYE_L), ("R", EYE_R)):
-    bpy.ops.mesh.primitive_uv_sphere_add(segments=32, ring_count=16, radius=0.093, location=loc)
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=32, ring_count=16, radius=0.099, location=loc)
     o = bpy.context.active_object; o.name = "lid" + nm
     bpy.ops.object.mode_set(mode='EDIT'); bpy.ops.mesh.select_all(action='DESELECT'); bpy.ops.object.mode_set(mode='OBJECT')
     for v in o.data.vertices: v.select = v.co.z < -0.001
@@ -165,7 +165,7 @@ for sx in (1, -1):
 # ---------------- set ----------------
 box("desk", (0, -0.75, 0.47), (1.7, 0.55, 0.03), M_DESK)
 box("deskfront", (0, -1.28, 0.20), (1.7, 0.02, 0.25), M_DARK)
-box("strip", (0, -1.305, 0.36), (1.7, 0.005, 0.012), P("strip", (0, 0, 0), 0.5, 0, (0.2, 0.5, 1.0), 6))
+box("strip", (0, -1.305, 0.36), (1.7, 0.005, 0.012), P("strip", (0, 0, 0), 0.5, 0, (0.2, 0.5, 1.0), 3))
 box("floor", (0, 0, -0.06), (8, 8, 0.01), P("floor", (0.02, 0.03, 0.06), 0.15, 0.3))
 box("wall", (0, 3.2, 2.0), (6, 0.05, 3), P("wall", (0.01, 0.02, 0.06), 0.6))
 import random
@@ -173,11 +173,11 @@ random.seed(4)
 for i in range(7):
     x = -3.3 + i * 1.1
     c = random.choice([(0.05, 0.25, 0.9), (0.1, 0.45, 1.0), (0.3, 0.6, 1.0)])
-    box(f"scr{i}", (x, 3.1, 1.4 + 0.5 * random.random()), (0.45, 0.02, 0.5 + 0.4 * random.random()), P(f"scr{i}", (0, 0, 0), 0.5, 0, c, 1.5 + 2 * random.random()))
-box("band", (0, 3.05, 2.75), (5, 0.02, 0.03), P("band", (0, 0, 0), 0.5, 0, (0.5, 0.75, 1.0), 8))
+    box(f"scr{i}", (x, 3.1, 1.4 + 0.5 * random.random()), (0.45, 0.02, 0.5 + 0.4 * random.random()), P(f"scr{i}", (0, 0, 0), 0.5, 0, c, 0.5 + 0.8 * random.random()))
+box("band", (0, 3.05, 2.75), (5, 0.02, 0.03), P("band", (0, 0, 0), 0.5, 0, (0.5, 0.75, 1.0), 3))
 bpy.ops.object.text_add(location=(0, 3.0, 3.0), rotation=(math.pi / 2, 0, 0))
-t = bpy.context.active_object; t.data.body = "MAMESUKE NEWS"; t.data.align_x = 'CENTER'; t.data.size = 0.42; t.data.extrude = 0.01
-t.data.materials.append(P("txt", (0, 0, 0), 0.5, 0, (1, 1, 1), 4))
+t = bpy.context.active_object; t.data.body = "MAMESUKE NEWS"; t.data.align_x = 'CENTER'; t.data.size = 0.26; t.data.extrude = 0.01
+t.data.materials.append(P("txt", (0, 0, 0), 0.5, 0, (1, 1, 1), 2))
 # microphone
 bpy.ops.mesh.primitive_cylinder_add(radius=0.012, depth=0.36, location=(0.62, -0.80, 0.66), rotation=(0.35, 0, 0))
 bpy.context.active_object.data.materials.append(M_MIC)
@@ -191,10 +191,10 @@ def light(name, loc, power, size, color=(1, 1, 1)):
     d = bpy.data.lights.new(name, 'AREA'); d.energy = power; d.size = size; d.color = color
     o = bpy.data.objects.new(name, d); sc.collection.objects.link(o); o.location = loc
     c = o.constraints.new('TRACK_TO'); c.target = target; c.track_axis = 'TRACK_NEGATIVE_Z'; c.up_axis = 'UP_Y'
-light("key", (-1.8, -3.2, 3.0), 700, 2.5, (1.0, 0.96, 0.9))
-light("fill", (2.2, -2.6, 1.6), 220, 3.0, (0.85, 0.92, 1.0))
-light("rimL", (-1.6, 1.6, 2.6), 500, 1.0, (0.4, 0.65, 1.0))
-light("rimR", (1.6, 1.6, 2.6), 500, 1.0, (0.4, 0.65, 1.0))
+light("key", (-1.8, -3.2, 3.0), 260, 2.5, (1.0, 0.96, 0.9))
+light("fill", (2.2, -2.6, 1.6), 80, 3.0, (0.85, 0.92, 1.0))
+light("rimL", (-1.6, 1.6, 2.6), 220, 1.0, (0.4, 0.65, 1.0))
+light("rimR", (1.6, 1.6, 2.6), 220, 1.0, (0.4, 0.65, 1.0))
 
 cam_d = bpy.data.cameras.new("cam"); cam = bpy.data.objects.new("cam", cam_d); sc.collection.objects.link(cam)
 cam.location = (0, -4.3, 1.30); cam_d.lens = 50
@@ -235,7 +235,7 @@ SLOW = smooth(OPEN, 5)
 REST = 0.10                                   # mouth slightly open at rest (friendly look)
 blinks = [int(1.3 * FPS), int((LEAD + VDUR + 0.25) * FPS)]
 def lid_at(f):
-    a = 12.0
+    a = -22.0
     for b in blinks:
         d = f - b
         if 0 <= d < 6: a = max(a, [50, 92, 95, 80, 45, 20][d])
@@ -263,6 +263,7 @@ for nm in ("core", "earL", "muzzle"):
     print("HAIRLEN", nm, round((p.hair_keys[-1].co - p.hair_keys[0].co).length, 4), len(p.hair_keys), flush=True)
 
 # ---------------- render ----------------
+sc.view_settings.view_transform = 'Standard'; sc.view_settings.look = 'None'
 sc.render.engine = 'CYCLES'; sc.cycles.device = 'CPU'
 sc.cycles.samples = JOB.get("samples", 24); sc.cycles.use_adaptive_sampling = True; sc.cycles.adaptive_threshold = 0.03
 sc.cycles.use_denoising = True
