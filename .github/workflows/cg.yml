@@ -28,7 +28,7 @@ jobs:
       - name: Libraries
         run: sudo apt-get update -qq && sudo apt-get install -y -qq libxi6 libxxf86vm1 libxfixes3 libxrender1 libgl1 libxkbcommon0 libsm6 libegl1
       - name: Render
-        run: ./blender/blender -b -noaudio -P cg/mamesuke.py -- ${{ matrix.chunk }} 4
+        run: ./blender/blender -b -noaudio --python-exit-code 1 -P cg/mamesuke.py -- ${{ matrix.chunk }} 4
       - uses: actions/upload-artifact@v4
         with:
           name: frames-${{ matrix.chunk }}

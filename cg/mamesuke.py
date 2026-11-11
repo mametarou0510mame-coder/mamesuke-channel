@@ -87,7 +87,9 @@ def fur(o, n, length, align=(0, 0, 0), child=22, rad=0.0028, clump=0.35, rough=0
     md = o.modifiers.new("fur", "PARTICLE_SYSTEM"); ps = md.particle_system; s = ps.settings
     s.type = 'HAIR'; s.count = n; s.hair_length = length; s.use_advanced_hair = True
     s.normal_factor = normal; s.object_align_factor = align
-    s.child_type = 'INTERPOLATED'; s.child_nbr = child; s.rendered_child_count = child
+    s.child_type = 'INTERPOLATED'; s.rendered_child_count = child
+    for k_ in ('child_percent', 'child_nbr'):
+        if hasattr(s, k_): setattr(s, k_, child)
     s.clump_factor = clump; s.roughness_1 = rough; s.roughness_1_size = 0.4; s.roughness_endpoint = 0.03
     s.hair_step = 5; s.render_step = 4; s.display_step = 3
     s.root_radius = 1.0; s.tip_radius = 0.15; s.radius_scale = rad
