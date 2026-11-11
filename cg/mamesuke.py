@@ -36,6 +36,22 @@ def HAIR(name, color):
     nt.links.new(h.outputs[0], nt.nodes["Material Output"].inputs["Surface"])
     return m
 
+head = bpy.data.objects.new("head", None); sc.collection.objects.link(head); head.location = (0, -0.05, 1.50)
+IMG = bpy.data.images.load(os.path.abspath("cg/tex_head.jpg"))
+def proj(nt):
+    """colour from the real front photo, projected along Y in head space"""
+    tc = nt.nodes.new("ShaderNodeTexCoord"); tc.object = head
+    sep = nt.nodes.new("ShaderNodeSeparateXYZ"); nt.links.new(tc.outputs["Object"], sep.inputs[0])
+    mu = nt.nodes.new("ShaderNodeMath"); mu.operation = 'MULTIPLY_ADD'; mu.inputs[1].default_value = 0.5298; mu.inputs[2].default_value = 0.5018
+    mv = nt.nodes.new("ShaderNodeMath"); mv.operation = 'MULTIPLY_ADD'; mv.inputs[1].default_value = 0.3972; mv.inputs[2].default_value = 0.7095
+    nt.links.new(sep.outputs["X"], mu.inputs[0]); nt.links.new(sep.outputs["Z"], mv.inputs[0])
+    cb = nt.nodes.new("ShaderNodeCombineXYZ"); nt.links.new(mu.outputs[0], cb.inputs["X"]); nt.links.new(mv.outputs[0], cb.inputs["Y"])
+    tx = nt.nodes.new("ShaderNodeTexImage"); tx.image = IMG; tx.extension = 'EXTEND'; nt.links.new(cb.outputs[0], tx.inputs["Vector"])
+    return tx.outputs["Color"]
+PS = P("proj_surf", (0.8, 0.7, 0.6), 0.9); PS.node_tree.links.new(proj(PS.node_tree), PS.node_tree.nodes["Principled BSDF"].inputs["Base Color"])
+PH = HAIR("proj_hair", (0.8, 0.7, 0.6))
+_h = [n for n in PH.node_tree.nodes if n.type == 'BSDF_HAIR_PRINCIPLED'][0]; PH.node_tree.links.new(proj(PH.node_tree), _h.inputs["Color"])
+
 WHITE_C, TAN_C = (0.86, 0.82, 0.74), (0.62, 0.40, 0.20)
 M_WHITE, M_TAN = P("white", WHITE_C, 0.9), P("tan", TAN_C, 0.9)
 H_WHITE, H_TAN = HAIR("h_white", (0.93, 0.90, 0.84)), HAIR("h_tan", (0.66, 0.44, 0.24))
@@ -83,7 +99,7 @@ def mask(o, excl):
         vg.add([v.index], w, 'REPLACE')
     return vg.name
 
-def fur(o, n, length, align=(0, 0, 0), child=22, rad=0.0028, clump=0.35, rough=0.02, excl=None, seed=1, normal=1.0):
+def fur(o, n, length, align=(0, 0, 0), child=10, rad=0.0034, clump=0.35, rough=0.02, excl=None, seed=1, normal=1.0):
     md = o.modifiers.new("fur", "PARTICLE_SYSTEM"); ps = md.particle_system; s = ps.settings
     s.type = 'HAIR'; s.count = n; s.hair_length = length; s.use_advanced_hair = True
     s.normal_factor = normal; s.object_align_factor = align
@@ -91,7 +107,7 @@ def fur(o, n, length, align=(0, 0, 0), child=22, rad=0.0028, clump=0.35, rough=0
     for k_ in ('child_percent', 'child_nbr'):
         if hasattr(s, k_): setattr(s, k_, child)
     s.clump_factor = clump; s.roughness_1 = rough; s.roughness_1_size = 0.4; s.roughness_endpoint = 0.03
-    s.hair_step = 5; s.render_step = 4; s.display_step = 3
+    s.hair_step = 4; s.render_step = 3; s.display_step = 3
     s.root_radius = 1.0; s.tip_radius = 0.15; s.radius_scale = rad
     s.material = 2; ps.seed = seed
     if excl:
@@ -99,19 +115,17 @@ def fur(o, n, length, align=(0, 0, 0), child=22, rad=0.0028, clump=0.35, rough=0
     o.show_instancer_for_render = True
 
 # ---------------- character ----------------
-HEADZ = 1.50
-head = empty("head", (0, -0.05, HEADZ))
 EYE_L, EYE_R = (0.19, -0.415, 0.05), (-0.19, -0.415, 0.05)
 NOSE = (0, -0.625, -0.07)
 EX_FACE = [(EYE_L, 0.12), (EYE_R, 0.12), (NOSE, 0.08)]
 
-core = sph("core", (0, 0, 0), (0.50, 0.46, 0.46), [M_WHITE, H_WHITE], head)
+core = sph("core", (0, 0, 0), (0.50, 0.46, 0.46), [PS, PH], head)
 fur(core, 2600, 0.09, (0, 0.15, -0.1), excl=EX_FACE, seed=1)
 for sx, nm in ((1, "L"), (-1, "R")):
-    p = sph("patch" + nm, (0.29 * sx, -0.10, 0.08), (0.24, 0.38, 0.36), [M_TAN, H_TAN], head)
+    p = sph("patch" + nm, (0.29 * sx, -0.10, 0.08), (0.24, 0.38, 0.36), [PS, PH], head)
     fur(p, 2200, 0.085, (0.1 * sx, 0.1, -0.15), excl=EX_FACE, seed=2 + (sx > 0))
-    ear = sph("ear" + nm, (0.53 * sx, 0.03, -0.14), (0.15, 0.20, 0.34), [M_TAN, H_TAN], head, rot=(0, -0.22 * sx, 0))
-    fur(ear, 1800, 0.20, (0.05 * sx, 0, -0.9), child=30, clump=0.5, rough=0.035, seed=5 + (sx > 0), normal=0.6)
+    ear = sph("ear" + nm, (0.50 * sx, 0.03, -0.12), (0.14, 0.20, 0.33), [PS, PH], head, rot=(0, -0.22 * sx, 0))
+    fur(ear, 1800, 0.20, (0.05 * sx, 0, -0.9), child=14, clump=0.5, rough=0.035, seed=5 + (sx > 0), normal=0.6)
     eye = sph("eye" + nm, EYE_L if sx > 0 else EYE_R, (0.085, 0.085, 0.085), [M_EYE], head)
 EARS = [bpy.data.objects["earL"], bpy.data.objects["earR"]]
 
@@ -123,15 +137,15 @@ for nm, loc in (("L", EYE_L), ("R", EYE_R)):
     bpy.ops.object.mode_set(mode='EDIT'); bpy.ops.mesh.select_all(action='DESELECT'); bpy.ops.object.mode_set(mode='OBJECT')
     for v in o.data.vertices: v.select = v.co.z < -0.001
     bpy.ops.object.mode_set(mode='EDIT'); bpy.ops.mesh.delete(type='VERT'); bpy.ops.object.mode_set(mode='OBJECT')
-    bpy.ops.object.shade_smooth(); o.data.materials.append(M_TAN); o.parent = head
+    bpy.ops.object.shade_smooth(); o.data.materials.append(PS); o.parent = head
     LIDS.append(o)
 
-muzzle = sph("muzzle", (0, -0.44, -0.15), (0.27, 0.20, 0.17), [M_WHITE, H_WHITE], head)
+muzzle = sph("muzzle", (0, -0.44, -0.15), (0.27, 0.20, 0.17), [PS, PH], head)
 fur(muzzle, 2400, 0.085, (0, -0.15, -0.45), clump=0.45, excl=[(NOSE, 0.07), (EYE_L, 0.12), (EYE_R, 0.12), ((0, -0.56, -0.31), 0.10)], seed=8)
 sph("nose", NOSE, (0.075, 0.05, 0.055), [M_NOSE], head)
 
 jaw = empty("jaw", (0, -0.30, -0.25), head)
-chin = sph("chin", (0, -0.21, -0.035), (0.165, 0.16, 0.06), [M_WHITE, H_WHITE], jaw)
+chin = sph("chin", (0, -0.21, -0.035), (0.165, 0.16, 0.06), [PS, PH], jaw)
 fur(chin, 900, 0.06, (0, -0.1, -0.5), excl=[((0, -0.24, 0.03), 0.13)], seed=9)
 sph("mouth_in", (0, -0.19, -0.005), (0.145, 0.15, 0.045), [M_MOUTH], jaw)
 sph("tongue", (0, -0.25, 0.025), (0.075, 0.10, 0.022), [M_TONGUE], jaw)
@@ -195,7 +209,7 @@ OPENV = {"a": 1.0, "o": 0.72, "e": 0.6, "i": 0.36, "u": 0.3, "N": 0.12, "cl": 0.
 vp = JOB["voice"]
 wv = wave.open(vp + ".wav"); VDUR = wv.getnframes() / wv.getframerate()
 q = json.load(open(vp + ".json", encoding="utf-8"))
-LEAD, TAIL = 0.5, 0.9
+LEAD, TAIL = 0.3, 0.5
 segs = [(q["prePhonemeLength"], 0.0)]
 for ap in q["accent_phrases"]:
     for m in ap["moras"]:
@@ -247,9 +261,9 @@ print("FRAMES", N, "DUR", TOTAL)
 
 # ---------------- render ----------------
 sc.render.engine = 'CYCLES'; sc.cycles.device = 'CPU'
-sc.cycles.samples = JOB.get("samples", 48); sc.cycles.use_adaptive_sampling = True; sc.cycles.adaptive_threshold = 0.03
+sc.cycles.samples = JOB.get("samples", 24); sc.cycles.use_adaptive_sampling = True; sc.cycles.adaptive_threshold = 0.03
 sc.cycles.use_denoising = True
-sc.cycles.max_bounces = 6
+sc.cycles.max_bounces = 4
 sc.render.resolution_x, sc.render.resolution_y = JOB.get("res", [720, 1280]); sc.render.resolution_percentage = 100
 sc.render.use_persistent_data = True
 sc.render.image_settings.file_format = 'PNG'
