@@ -269,14 +269,22 @@ sc.cycles.samples = JOB.get("samples", 24); sc.cycles.use_adaptive_sampling = Tr
 sc.cycles.use_denoising = True
 sc.cycles.max_bounces = 4
 sc.render.resolution_x, sc.render.resolution_y = JOB.get("res", [720, 1280]); sc.render.resolution_percentage = 100
-sc.render.use_persistent_data = True
-sc.render.image_settings.file_format = 'PNG'
-frames = list(range(N + 1)) if JOB["frames"] == "all" else JOB["frames"]
+sc.render.use_persistent_data = False
 os.makedirs("cg/out", exist_ok=True)
-json.dump({"n": N, "fps": FPS, "lead": LEAD, "total": TOTAL}, open(f"cg/out/meta_{CHUNK}.json", "w"))
-for i, f in enumerate(frames):
-    if i % NCH != CHUNK or f > N: continue
-    t0 = time.time(); sc.frame_set(f)
-    sc.render.filepath = os.path.abspath(f"cg/out/f_{f:04d}.png")
-    bpy.ops.render.render(write_still=True)
-    print("RENDERED", f, round(time.time() - t0, 1), "s", flush=True)
+if JOB["frames"] == "all":
+    per = math.ceil((N + 1) / NCH); f0, f1 = CHUNK * per, min(N, (CHUNK + 1) * per - 1)
+    if f0 <= N:
+        sc.frame_start, sc.frame_end = f0, f1
+        sc.render.image_settings.file_format = 'FFMPEG'
+        sc.render.ffmpeg.format = 'MPEG4'; sc.render.ffmpeg.codec = 'H264'
+        sc.render.ffmpeg.constant_rate_factor = 'HIGH'; sc.render.ffmpeg.gopsize = 1
+        sc.render.filepath = os.path.abspath(f"cg/out/seg_{CHUNK:02d}_")
+        t0 = time.time(); bpy.ops.render.render(animation=True)
+        print("RENDERED", f0, f1, round(time.time() - t0, 1), "s", flush=True)
+    if CHUNK == 0: json.dump({"n": N, "fps": FPS, "lead": LEAD, "total": TOTAL}, open("cg/out/meta.json", "w"))
+else:
+    sc.render.image_settings.file_format = 'JPEG'; sc.render.image_settings.quality = 90
+    for i, f in enumerate(JOB["frames"]):
+        if i % NCH != CHUNK or f > N: continue
+        sc.frame_set(f); sc.render.filepath = os.path.abspath(f"cg/out/f_{f:04d}.jpg")
+        bpy.ops.render.render(write_still=True)
