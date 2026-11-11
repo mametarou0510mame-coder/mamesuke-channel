@@ -101,8 +101,7 @@ def mask(o, excl):
 
 def fur(o, n, length, align=(0, 0, 0), child=10, rad=0.0034, clump=0.35, rough=0.02, excl=None, seed=1, normal=1.0):
     md = o.modifiers.new("fur", "PARTICLE_SYSTEM"); ps = md.particle_system; s = ps.settings
-    s.type = 'HAIR'; s.count = n; s.hair_length = length; s.use_advanced_hair = True
-    s.normal_factor = normal; s.object_align_factor = align
+    s.type = 'HAIR'; s.count = n; s.hair_length = length
     s.child_type = 'INTERPOLATED'; s.rendered_child_count = child
     for k_ in ('child_percent', 'child_nbr'):
         if hasattr(s, k_): setattr(s, k_, child)
@@ -258,6 +257,10 @@ for f in range(N + 1):
         l.rotation_euler = (math.radians(lid_at(f)), 0, 0); l.keyframe_insert("rotation_euler", frame=f)
 sc.frame_start, sc.frame_end = 0, N
 print("FRAMES", N, "DUR", TOTAL)
+dg = bpy.context.evaluated_depsgraph_get()
+for nm in ("core", "earL", "muzzle"):
+    ev = bpy.data.objects[nm].evaluated_get(dg); p = ev.particle_systems[0].particles[0]
+    print("HAIRLEN", nm, round((p.hair_keys[-1].co - p.hair_keys[0].co).length, 4), len(p.hair_keys), flush=True)
 
 # ---------------- render ----------------
 sc.render.engine = 'CYCLES'; sc.cycles.device = 'CPU'
