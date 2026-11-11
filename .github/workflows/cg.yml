@@ -1,0 +1,36 @@
+name: CG (Blender)
+# cg/ が変わったら、Blender(Cycles)でまめすけアナの3DCGをレンダリングして連番画像をアーティファクトに保存する
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "cg/**"
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        chunk: [0, 1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        id: bl
+        with:
+          path: blender
+          key: blender-4.2.0-linux-x64
+      - name: Download Blender
+        if: steps.bl.outputs.cache-hit != 'true'
+        run: |
+          curl -sSL https://download.blender.org/release/Blender4.2/blender-4.2.0-linux-x64.tar.xz -o b.tar.xz
+          mkdir blender && tar -xf b.tar.xz -C blender --strip-components=1 && rm b.tar.xz
+      - name: Libraries
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq libxi6 libxxf86vm1 libxfixes3 libxrender1 libgl1 libxkbcommon0 libsm6 libegl1
+      - name: Render
+        run: ./blender/blender -b -noaudio -P cg/mamesuke.py -- ${{ matrix.chunk }} 4
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frames-${{ matrix.chunk }}
+          path: cg/out
+          if-no-files-found: ignore
