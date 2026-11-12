@@ -11,7 +11,10 @@ import json, os, sys, time, urllib.request, urllib.parse, urllib.error, datetime
 
 TOKEN = os.environ.get("IG_ACCESS_TOKEN", "").strip()
 VER = os.environ.get("IG_API_VERSION", "v23.0")
-G = f"https://graph.instagram.com/{VER}"
+IG_USER_ID = os.environ.get("IG_USER_ID", "").strip()
+# Instagram-login tokens (IGAA...) use graph.instagram.com; Facebook/unified-login tokens (EAA...) use graph.facebook.com
+HOST = "graph.facebook.com" if TOKEN.startswith("EAA") else "graph.instagram.com"
+G = f"https://{HOST}/{VER}"
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
@@ -36,6 +39,11 @@ def call(method, url, params=None, data=None, headers=None, timeout=120):
 
 
 def me():
+    if HOST == "graph.facebook.com":
+        if not IG_USER_ID:
+            raise SystemExit("IG_USER_ID が未設定です")
+        r = call("GET", f"{G}/{IG_USER_ID}", {"fields": "id,username"})
+        return {"user_id": r["id"], "username": r.get("username")}
     return call("GET", f"{G}/me", {"fields": "user_id,username,account_type"})
 
 
@@ -95,8 +103,11 @@ if __name__ == "__main__":
     if a[:1] == ["--check"]:
         print(json.dumps(me(), ensure_ascii=False))
     elif a[:1] == ["--refresh"]:
-        r = call("GET", "https://graph.instagram.com/refresh_access_token", {"grant_type": "ig_refresh_token"})
-        print(r["access_token"])
+        if HOST == "graph.facebook.com":
+            print(TOKEN)   # system-user tokens from unified login do not expire
+        else:
+            r = call("GET", "https://graph.instagram.com/refresh_access_token", {"grant_type": "ig_refresh_token"})
+            print(r["access_token"])
     elif a[:1] == ["--now"]:
         publish(a[1])
     else:
