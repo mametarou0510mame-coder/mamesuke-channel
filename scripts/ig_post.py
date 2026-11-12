@@ -53,15 +53,23 @@ def publish(slug):
     caption = open(os.path.join(d, meta.get("caption", "caption.txt")), encoding="utf-8").read().strip()
     video = os.path.join(d, meta.get("video", "video.mp4"))
     ig = me()["user_id"]
-    # 1) resumable container
-    c = call("POST", f"{G}/{ig}/media", {"media_type": "REELS", "upload_type": "resumable",
-                                         "caption": caption, "share_to_feed": "true"})
-    cid = c["id"]
-    # 2) upload the local file
-    size = os.path.getsize(video)
-    with open(video, "rb") as f:
-        call("POST", f"https://rupload.facebook.com/ig-api-upload/{VER}/{cid}", data=f.read(), timeout=600,
-             headers={"Authorization": f"OAuth {TOKEN}", "offset": "0", "file_size": str(size)})
+    base = os.environ.get("VIDEO_BASE_URL", "").rstrip("/")
+    if HOST == "graph.instagram.com":
+        # Instagram-login apps cannot upload files: Instagram fetches the video from a public URL
+        if not base:
+            raise SystemExit("VIDEO_BASE_URL が未設定です（投稿時に一時公開する仕組みが必要）")
+        url = f"{base}/{slug}/{meta.get('video', 'video.mp4')}"
+        cid = call("POST", f"{G}/{ig}/media", {"media_type": "REELS", "video_url": url,
+                                               "caption": caption, "share_to_feed": "true"})["id"]
+    else:
+        # 1) resumable container (Facebook-login apps)
+        cid = call("POST", f"{G}/{ig}/media", {"media_type": "REELS", "upload_type": "resumable",
+                                               "caption": caption, "share_to_feed": "true"})["id"]
+        # 2) upload the local file
+        size = os.path.getsize(video)
+        with open(video, "rb") as f:
+            call("POST", f"https://rupload.facebook.com/ig-api-upload/{VER}/{cid}", data=f.read(), timeout=600,
+                 headers={"Authorization": f"OAuth {TOKEN}", "offset": "0", "file_size": str(size)})
     # 3) wait for processing
     for _ in range(90):
         st = call("GET", f"{G}/{cid}", {"fields": "status_code,status"})

@@ -44,6 +44,20 @@ jobs:
       - name: 接続診断
         if: steps.mode.outputs.m == 'diag'
         run: python scripts/ig_post.py --diag
+      - name: 動画を一時公開（投稿の間だけ）
+        if: steps.mode.outputs.m == 'post' || steps.mode.outputs.m == 'now'
+        run: |
+          curl -fsSL -o /tmp/cloudflared https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
+          chmod +x /tmp/cloudflared
+          python3 -m http.server 8080 --bind 127.0.0.1 --directory posts >/tmp/http.log 2>&1 &
+          /tmp/cloudflared tunnel --no-autoupdate --url http://127.0.0.1:8080 >/tmp/cf.log 2>&1 &
+          for i in $(seq 1 60); do
+            URL=$(grep -o 'https://[a-z0-9-]*\.trycloudflare\.com' /tmp/cf.log | head -1)
+            [ -n "$URL" ] && break; sleep 2
+          done
+          [ -n "$URL" ] || { cat /tmp/cf.log; exit 1; }
+          for i in $(seq 1 30); do curl -fsI "$URL/README.md" >/dev/null 2>&1 && break; sleep 3; done
+          echo "VIDEO_BASE_URL=$URL" >> $GITHUB_ENV
       - name: 投稿
         if: steps.mode.outputs.m == 'post' || steps.mode.outputs.m == 'now'
         run: |
