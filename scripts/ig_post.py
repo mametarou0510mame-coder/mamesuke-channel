@@ -106,10 +106,13 @@ if __name__ == "__main__":
                  ("fb /me/accounts", "https://graph.facebook.com/v23.0/me/accounts", {"fields": "name,instagram_business_account{id,username}"}),
                  ("fb ig user", f"https://graph.facebook.com/v23.0/{IG_USER_ID}", {"fields": "id,username"}),
                  ("ig /me", "https://graph.instagram.com/v23.0/me", {"fields": "user_id,username,account_type"}),
-                 ("fb permissions", "https://graph.facebook.com/v23.0/me/permissions", {})]
+                 ("fb permissions", "https://graph.facebook.com/v23.0/me/permissions", {}),
+                 ("fb debug", "https://graph.facebook.com/v23.0/debug_token", {"input_token": TOKEN}),
+                 ("fb me ids", "https://graph.facebook.com/v23.0/me", {"fields": "id,name,instagram_accounts{id,username}"})]
         for name, url, prm in tries:
             try:
-                print(name, "->", json.dumps(call("GET", url, prm), ensure_ascii=False)[:600])
+                out = json.dumps(call("GET", url, prm), ensure_ascii=False)
+                print(name, "->", out.replace(TOKEN, "***")[:1500])
             except SystemExit as e:
                 print(name, "-> ERR", str(e)[:400])
     elif a[:1] == ["--check"]:
