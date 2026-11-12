@@ -116,7 +116,9 @@ if __name__ == "__main__":
             except SystemExit as e:
                 print(name, "-> ERR", str(e)[:400])
     elif a[:1] == ["--check"]:
-        print(json.dumps(me(), ensure_ascii=False))
+        m = me(); print(json.dumps(m, ensure_ascii=False))
+        lim = call("GET", f"{G}/{m['user_id']}/content_publishing_limit", {"fields": "quota_usage,config"})
+        print("publishing limit:", json.dumps(lim, ensure_ascii=False))
     elif a[:1] == ["--refresh"]:
         if HOST == "graph.facebook.com":
             print(TOKEN)   # system-user tokens from unified login do not expire
