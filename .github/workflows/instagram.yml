@@ -1,0 +1,71 @@
+name: Instagram (リール自動投稿)
+
+on:
+  schedule:
+    - cron: "17 * * * *"          # 毎時17分に、公開時刻を過ぎた投稿をチェック
+    - cron: "41 3 1,15 * *"       # 月2回、長期トークンを更新
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "check = トークン確認 / post = 時刻が来たものを投稿 / now = 指定を今すぐ投稿 / refresh = トークン更新"
+        default: check
+        type: choice
+        options: [check, post, now, refresh]
+      slug:
+        description: "now のときの投稿フォルダ名 (posts/ の下)"
+        required: false
+
+concurrency:
+  group: instagram
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: 動作を決める
+        id: mode
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then echo "m=${{ inputs.action }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event.schedule }}" = "41 3 1,15 * *" ]; then echo "m=refresh" >> $GITHUB_OUTPUT
+          else echo "m=post" >> $GITHUB_OUTPUT; fi
+      - name: トークン確認
+        if: steps.mode.outputs.m == 'check'
+        run: python scripts/ig_post.py --check
+      - name: 投稿
+        if: steps.mode.outputs.m == 'post' || steps.mode.outputs.m == 'now'
+        run: |
+          if [ "${{ steps.mode.outputs.m }}" = "now" ]; then python scripts/ig_post.py --now "${{ inputs.slug }}"; else python scripts/ig_post.py; fi
+      - name: 投稿結果を記録
+        if: always() && (steps.mode.outputs.m == 'post' || steps.mode.outputs.m == 'now')
+        run: |
+          git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add posts/*/posted.json 2>/dev/null || true
+          git diff --cached --quiet || (git commit -m "instagram: 投稿済みを記録" && git pull --rebase -q && git push)
+      - name: トークン更新
+        if: steps.mode.outputs.m == 'refresh' && env.IG_ACCESS_TOKEN != ''
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT_SECRETS }}
+        run: |
+          NEW=$(python scripts/ig_post.py --refresh)
+          echo "::add-mask::$NEW"
+          if [ -n "$GH_TOKEN" ]; then
+            gh secret set IG_ACCESS_TOKEN --body "$NEW" --repo "${{ github.repository }}" && echo "IG_ACCESS_TOKEN を更新しました"
+          else
+            echo "GH_PAT_SECRETS が未設定のため、シークレットは更新していません（有効期限は延長済み）"
+          fi
+      - name: 失敗したらIssueでお知らせ
+        if: failure() && github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue create --repo "${{ github.repository }}" --title "Instagram自動投稿でエラー (${{ steps.mode.outputs.m }})" \
+            --body "実行ログ: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" || true
