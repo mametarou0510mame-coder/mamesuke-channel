@@ -10,7 +10,7 @@ on:
         description: "check = トークン確認 / post = 時刻が来たものを投稿 / now = 指定を今すぐ投稿 / refresh = トークン更新"
         default: check
         type: choice
-        options: [check, post, now, refresh]
+        options: [check, diag, post, now, refresh]
       slug:
         description: "now のときの投稿フォルダ名 (posts/ の下)"
         required: false
@@ -41,6 +41,9 @@ jobs:
       - name: トークン確認
         if: steps.mode.outputs.m == 'check'
         run: python scripts/ig_post.py --check
+      - name: 接続診断
+        if: steps.mode.outputs.m == 'diag'
+        run: python scripts/ig_post.py --diag
       - name: 投稿
         if: steps.mode.outputs.m == 'post' || steps.mode.outputs.m == 'now'
         run: |

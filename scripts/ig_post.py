@@ -100,7 +100,19 @@ if __name__ == "__main__":
     if not TOKEN:
         print("IG_ACCESS_TOKEN が未設定のため何もしません。"); sys.exit(0)
     a = sys.argv[1:]
-    if a[:1] == ["--check"]:
+    if a[:1] == ["--diag"]:
+        print("token prefix:", TOKEN[:4], "len", len(TOKEN))
+        tries = [("fb /me", "https://graph.facebook.com/v23.0/me", {"fields": "id,name"}),
+                 ("fb /me/accounts", "https://graph.facebook.com/v23.0/me/accounts", {"fields": "name,instagram_business_account{id,username}"}),
+                 ("fb ig user", f"https://graph.facebook.com/v23.0/{IG_USER_ID}", {"fields": "id,username"}),
+                 ("ig /me", "https://graph.instagram.com/v23.0/me", {"fields": "user_id,username,account_type"}),
+                 ("fb permissions", "https://graph.facebook.com/v23.0/me/permissions", {})]
+        for name, url, prm in tries:
+            try:
+                print(name, "->", json.dumps(call("GET", url, prm), ensure_ascii=False)[:600])
+            except SystemExit as e:
+                print(name, "-> ERR", str(e)[:400])
+    elif a[:1] == ["--check"]:
         print(json.dumps(me(), ensure_ascii=False))
     elif a[:1] == ["--refresh"]:
         if HOST == "graph.facebook.com":
