@@ -6,6 +6,7 @@ on:
     paths:
       - "scripts_txt/**"
       - "scripts/tts.py"
+      - ".github/workflows/voice.yml"
 permissions:
   contents: write
 jobs:
@@ -28,4 +29,4 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add voices
           git diff --cached --quiet || git commit -m "voices: VOICEVOX:ずんだもん で音声を生成"
-          git push
+          git pull --rebase -q && git push
