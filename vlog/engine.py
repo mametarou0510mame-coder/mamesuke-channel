@@ -284,8 +284,10 @@ class Pop(Layer):
             s *= 1 + self.wobble * math.sin((t - self.t0) * 2 * math.pi * 1.6)
         img = scaled(self.img, s)
         if self.rot:
-            h, w = img.shape[:2]; M = cv2.getRotationMatrix2D((w / 2, h / 2), self.rot, 1.0)
-            img = cv2.warpAffine(img, M, (w, h), flags=cv2.INTER_LINEAR, borderValue=(0, 0, 0, 0))
+            h, w = img.shape[:2]; c, s_ = abs(math.cos(math.radians(self.rot))), abs(math.sin(math.radians(self.rot)))
+            nw, nh = int(w * c + h * s_) + 2, int(w * s_ + h * c) + 2
+            M = cv2.getRotationMatrix2D((w / 2, h / 2), self.rot, 1.0); M[0, 2] += (nw - w) / 2; M[1, 2] += (nh - h) / 2
+            img = cv2.warpAffine(img, M, (nw, nh), flags=cv2.INTER_LINEAR, borderValue=(0, 0, 0, 0))
         h, w = img.shape[:2]
         blend(f, img, int(self.cx - w / 2 + dx), int(self.cy - h / 2), a)
 
@@ -502,7 +504,20 @@ def mix(total, narr, ses, bgm_track=None, bgm_gain=0.42, duck=0.45, out='mix.wav
 
 
 def loudnorm(src, dst, I=-14):
-    subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', src, '-af', f'loudnorm=I={I}:TP=-1.5:LRA=11', '-ar', '48000', dst], check=True)
+    """two-pass loudness normalisation to I LUFS (true peak -1.5 dB)"""
+    r = subprocess.run(['ffmpeg', '-hide_banner', '-i', src, '-af', f'loudnorm=I={I}:TP=-1.5:LRA=11:print_format=json', '-f', 'null', '-'],
+                       capture_output=True, text=True).stderr
+    j = json.loads(r[r.rfind('{'):r.rfind('}') + 1])
+    af = (f"loudnorm=I={I}:TP=-1.5:LRA=11:measured_I={j['input_i']}:measured_TP={j['input_tp']}:"
+          f"measured_LRA={j['input_lra']}:measured_thresh={j['input_thresh']}:offset={j['target_offset']}:linear=true")
+    subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', src, '-af', af, '-ar', '48000', dst], check=True)
+
+
+def trim_subs(layers):
+    """make consecutive subtitle layers never overlap (each ends when the next begins)"""
+    subs = sorted([l for l in layers if getattr(l, 'is_sub', False)], key=lambda l: l.t0)
+    for a_, b_ in zip(subs, subs[1:]):
+        if a_.t1 > b_.t0 - 0.03: a_.t1 = max(a_.t0 + 0.2, b_.t0 - 0.03)
 
 
 class Grain(Layer):

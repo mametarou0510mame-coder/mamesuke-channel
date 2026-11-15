@@ -27,7 +27,7 @@ def say(i, t, sub=True):
     narr.append((f"{VO}/{i}.wav", t))
     if sub:
         img = subtitle(TXT[i], 56, face=FS, inner=((10, 10, 15), 7))
-        TL.layer(Pop(t, t + d(i) + 0.25, img, W // 2, SUBY, inn=0.25, out=0.2, style='fade'))
+        TL.layer(Pop(t, t + d(i) + 0.25, img, W // 2, SUBY, inn=0.25, out=0.2, style='fade')).is_sub = True
 
 
 def se(name, t, g=1.0, **kw):
@@ -109,7 +109,7 @@ music[-1] = ('calm', music[-1][1], TL.t)
 # overlays across the whole piece
 TL.layer(Grain(0, t, amt=6))
 credit = telop('VOICEVOX:ずんだもん', 26, fill=(255, 255, 255), inner=((0, 0, 0), 4), outer=None, shadow=0.5, black=False)
-TL.layer(Static(0, TL.t, credit, W - credit.shape[1] - 36, 146, fade=0))
+TL.layer(Static(0, TL.t, credit, 44, 236 if 'hdr' in dir() else 196, fade=0))
 doc = telop('DOCUMENT', 30, fill=(255, 255, 255), inner=None, outer=None, shadow=0.6, face=FS)
 TL.layer(Static(d('D01') + 0.9, t, doc, 44, 146, fade=0.5))
 
@@ -127,6 +127,7 @@ for kind, a, b in music:
     S.place(bgm, sec, a)
 bgm = S.norm(bgm, 0.8)
 
+trim_subs(TL.layers)
 print(f"timeline {total:.1f}s, clips {len(TL.clips)}, layers {len(TL.layers)}")
 if '--plan' in sys.argv: sys.exit()
 mix(total, narr, ses, bgm, bgm_gain=0.55, duck=0.5, out=f"{WORK}/mix.wav")

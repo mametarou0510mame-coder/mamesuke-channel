@@ -26,7 +26,7 @@ def say(i, t, sub=True, y=SUBY):
     narr.append((f"{VO}/{i}.wav", t))
     if sub:
         img = subtitle(TXT[i])
-        TL.layer(Pop(t, t + d(i) + 0.15, img, W // 2, y, inn=0.12, out=0.1, style='fade'))
+        TL.layer(Pop(t, t + d(i) + 0.15, img, W // 2, y, inn=0.12, out=0.1, style='fade')).is_sub = True
 
 
 def se(name, t, g=1.0, **kw):
@@ -153,7 +153,7 @@ TL.layer(SpeedLines(t, t + 0.95 / 0.5, 380, 760, inner=420))
 tg = t + (7.15 - 6.85) / 0.5
 TL.layer(Flash(tg, 0.3))
 say('N12', tg - 0.1)
-TL.layer(Pop(tg, TL.t + 1.3, telop('決まったー！', 170, maxw=1000, fill=((255, 255, 140), (255, 120, 0)), inner=((140, 20, 0), 14)), W // 2, 420, style='stamp', inn=0.16, rot=-4))
+TL.layer(Pop(tg, TL.t + 1.3, telop('決まったー！', 160, maxw=900, fill=((255, 255, 140), (255, 120, 0)), inner=((140, 20, 0), 14)), W // 2, 420, style='stamp', inn=0.16, rot=-4))
 se('don', tg, 1.0); se('applause', tg + 0.1, 0.6, d=2.4)
 
 # ---------------------------------------------------------------- 11. the lick
@@ -200,7 +200,7 @@ music[-1] = ('calm', music[-1][1], TL.t)
 TL.layer(Static(head_t0, t + 0.3, hdr, 40, 140))
 TL.layer(Static(head_t0, t + 0.3, hdr2, 40 + hdr.shape[1] + 8, 140))
 TL.layer(Static(head_t0, TL.t, note, 44, 140 + hdr.shape[0] + 8))
-TL.layer(Static(0, TL.t, credit, W - credit.shape[1] - 36, 146, fade=0))
+TL.layer(Static(0, TL.t, credit, 44, 236 if 'hdr' in dir() else 196, fade=0))
 
 # ---------------------------------------------------------------- music
 total = TL.t
@@ -214,6 +214,7 @@ for kind, a, b in music:
     S.place(bgm, sec * (0.85 if kind == 'tense' else 1.0), a)
 bgm = S.norm(bgm, 0.8)
 
+trim_subs(TL.layers)
 print(f"timeline {total:.1f}s, clips {len(TL.clips)}, layers {len(TL.layers)}")
 if '--plan' in sys.argv: sys.exit()
 mix(total, narr, ses, bgm, bgm_gain=0.5, duck=0.42, out=f"{WORK}/mix.wav")
