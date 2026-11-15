@@ -93,8 +93,8 @@ def _lut(kind):
         r, g, b = s ** 0.97, s, np.clip(s ** 1.04 * 0.98, 0, 1)
     elif kind == 'cool':
         r, g, b = np.clip(s ** 1.03 * 0.98, 0, 1), s, s ** 0.97
-    elif kind == 'doc':
-        s2 = np.clip(0.5 + (s - 0.5) * 1.1, 0, 1); r, g, b = s2 ** 0.98, s2, np.clip(s2 ** 1.06, 0, 1)
+    elif kind == 'doc':   # soft, slightly lifted blacks, a touch of teal in the shadows
+        s2 = 0.04 + 0.94 * x ** 1.02; r, g, b = s2 ** 1.01, s2, np.clip(s2 ** 0.99 + 0.01, 0, 1)
     else:
         r = g = b = x
     return [(np.clip(c, 0, 1) * 255).astype(np.uint8) for c in (r, g, b)]
@@ -447,7 +447,7 @@ class Timeline:
                 f = zoom_frame(f, zz, cx, cy, dx, dy, rot)
                 if (whip_in and k < 6) or (whip_out and k >= nc - 6):
                     kk = 61; f = cv2.blur(f, (kk, 3))
-                f = grade(f, clip.grade)
+                f = grade(f, clip.grade, sat={'doc': 0.94, 'none': 1.0}.get(clip.grade, 1.12))
                 for l in self.layers:
                     if l.pre and l.active(t): l.draw(f, t)
                 for l in self.layers:

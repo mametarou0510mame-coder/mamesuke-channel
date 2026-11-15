@@ -68,8 +68,7 @@ se('chime', t + 0.6, 0.35)
 t = beat('D03', 'IMG_1790.MOV', 0.0, extra=0.4, maxsrc=1.38, speed=0.5, fx=0.5, zoom=(1.05, 1.25, 0.45, 0.6))
 TL.layer(Chapter(t + 0.1, t + 2.6, 'ごはん', 'MEAL TIME'))
 se('whoosh', t, 0.35)
-beat('D04', 'IMG_1831.MOV', 23.0, extra=0.9, zoom=(1.0, 1.15, 0.5, 0.55))
-beat('D05', 'IMG_1831.MOV', 45.0, extra=0.8, zoom=(1.15, 1.05, 0.5, 0.55))
+beat('D04', 'IMG_1831.MOV', 23.0, extra=0.6, fy=0.7, zoom=(1.0, 1.08, 0.5, 0.6))
 
 # ---------------------------------------------------------------- chapter 2: ひとやすみ・あそび
 t = beat('D06', 'IMG_1132.MOV', 0.5, extra=1.0, maxsrc=3.4, zoom=(1.0, 1.1, 0.5, 0.5))
@@ -98,7 +97,7 @@ TL.layer(Flash(TL.t - 0.6, 0.6, color=(0, 0, 0), peak=0.0))
 
 # ---------------------------------------------------------------- ending: back to the studio
 L = d('D16') + 2.6
-t = TL.add(Clip(ANCHOR, 40.0, 0.2, z=1.5, fy=0.12, grade='none', hold=L - 0.2, zoom=(1.0, 1.06, 0.5, 0.45)))
+t = TL.add(Clip(ANCHOR, 40.0, 0.2, z=1.75, fy=0.30, grade='none', hold=L - 0.2, zoom=(1.0, 1.06, 0.5, 0.45)))
 TL.layer(Flash(t, 0.35, color=(255, 255, 255), peak=0.7))
 say('D16', t + 0.4)
 TL.layer(Pop(t + 0.5, t + L, label_box('まめすけNEWS', 54, bg=(215, 25, 45), padx=34, pady=12), W // 2, 1200, inn=0.3))
