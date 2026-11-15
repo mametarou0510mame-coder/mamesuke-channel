@@ -15,14 +15,18 @@ def post(path, params, body=None):
         return r.read()
 
 
-def synth(text, out):
-    q = json.loads(post("/audio_query", {"text": text, "speaker": SPEAKER}))
-    q["speedScale"] = SPEED
-    q["pitchScale"] = PITCH
+def synth(text, out, opt=None):
+    opt = opt or {}
+    spk = int(opt.get("speaker", SPEAKER))
+    q = json.loads(post("/audio_query", {"text": text, "speaker": spk}))
+    q["speedScale"] = float(opt.get("speed", SPEED))
+    q["pitchScale"] = float(opt.get("pitch", PITCH))
+    q["intonationScale"] = float(opt.get("intonation", q.get("intonationScale", 1.0)))
+    q["volumeScale"] = float(opt.get("volume", q.get("volumeScale", 1.0)))
     q["prePhonemeLength"] = 0.05
-    q["postPhonemeLength"] = 0.15
+    q["postPhonemeLength"] = float(opt.get("post", 0.15))
     with open(out, "wb") as f:
-        f.write(post("/synthesis", {"speaker": SPEAKER}, q))
+        f.write(post("/synthesis", {"speaker": spk}, q))
     # 口パク用: 音素ごとのタイミングを保存
     with open(out[:-4] + ".json", "w", encoding="utf-8") as f:
         json.dump(q, f, ensure_ascii=False)
@@ -35,7 +39,9 @@ for tsv in sorted(glob.glob("scripts_txt/*.tsv")):
         line = line.rstrip("\n")
         if not line.strip() or "\t" not in line:
             continue
-        lid, text = line.split("\t", 1)
+        parts = line.split("\t")
+        lid, text = parts[0], parts[1]
+        opt = json.loads(parts[2]) if len(parts) > 2 and parts[2].strip() else None   # 3列目(任意): {"speed":1.2,"pitch":0.05,"intonation":1.4,"speaker":3}
         out = f"voices/{name}/{lid}.wav"
-        synth(text, out)
+        synth(text, out, opt)
         print("ok", out, text)
