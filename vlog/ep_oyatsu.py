@@ -97,13 +97,13 @@ TL.add(Clip('IMG_1131.MOV', 2.7, 1.5, zoom=(1.0, 1.1, 0.35, 0.45)))
 say('N06', t + 0.05)
 se('roll', t, 0.9, d=1.5 + 1.0)
 t5 = TL.t
-slow = Clip('IMG_1131.MOV', 4.2, 1.1, speed=0.33, zoom=(1.1, 1.38, 0.3, 0.45), hold=0.35)
+slow = Clip('IMG_1131.MOV', 4.2, 1.05, speed=0.5, zoom=(1.1, 1.38, 0.3, 0.45), hold=0.5)
 TL.add(slow)
 se('slow', t5, 0.7)
-TL.layer(SpeedLines(t5, t5 + 1.1, 330, 820, inner=380))
-tb = t5 + (4.62 - 4.2) / 0.33          # bite moment on the output timeline
+TL.layer(SpeedLines(t5, t5 + 1.0, 330, 820, inner=380))
+tb = t5 + (4.55 - 4.2) / 0.5          # bite moment on the output timeline
 TL.layer(Flash(tb, 0.3))
-TL.layer(Pop(tb, TL.t + 3.2, telop('交渉成立！', 170, maxw=1000, fill=((255, 255, 255), (255, 225, 230)), inner=((210, 20, 45), 14), outer=((255, 255, 255), 12)), W // 2, 420, style='stamp', inn=0.16))
+TL.layer(Pop(tb, TL.t, telop('交渉成立！', 170, maxw=1000, fill=((255, 255, 255), (255, 225, 230)), inner=((210, 20, 45), 14), outer=((255, 255, 255), 12)), W // 2, 420, style='stamp', inn=0.16))
 se('don', tb, 1.0); se('applause', tb + 0.1, 0.5, d=2.0)
 say('N07', tb + 0.15)
 music.append(('main', tb, None))
@@ -147,10 +147,10 @@ se('whoosh', t + 0.3, 0.5)
 
 # ---------------------------------------------------------------- 10. the grab (slow) → 決まったー
 t = TL.t
-TL.add(Clip('IMG_1955.MOV', 6.85, 0.95, speed=0.3, zoom=(1.0, 1.3, 0.38, 0.4)))
+TL.add(Clip('IMG_1955.MOV', 6.85, 0.95, speed=0.5, zoom=(1.0, 1.3, 0.38, 0.4)))
 se('slow', t, 0.6); se('roll', t, 0.7, d=0.9)
-TL.layer(SpeedLines(t, t + 0.95 / 0.3, 380, 760, inner=420))
-tg = t + (7.2 - 6.85) / 0.3
+TL.layer(SpeedLines(t, t + 0.95 / 0.5, 380, 760, inner=420))
+tg = t + (7.15 - 6.85) / 0.5
 TL.layer(Flash(tg, 0.3))
 say('N12', tg - 0.1)
 TL.layer(Pop(tg, TL.t + 1.3, telop('決まったー！', 170, maxw=1000, fill=((255, 255, 140), (255, 120, 0)), inner=((140, 20, 0), 14)), W // 2, 420, style='stamp', inn=0.16, rot=-4))
@@ -158,7 +158,7 @@ se('don', tg, 1.0); se('applause', tg + 0.1, 0.6, d=2.4)
 
 # ---------------------------------------------------------------- 11. the lick
 t = TL.t
-TL.add(Clip('IMG_1955.MOV', 9.95, 0.5, speed=0.4, zoom=(1.3, 1.5, 0.45, 0.5)))
+TL.add(Clip('IMG_1955.MOV', 9.9, 0.6, speed=0.5, zoom=(1.3, 1.5, 0.45, 0.5)))
 TL.layer(Pop(t + 0.1, TL.t, telop('ぺろり', 120, fill=((255, 230, 240), (255, 130, 180)), inner=((150, 0, 60), 11)), 300, 1100, rot=8))
 se('pon', t + 0.1, 0.8)
 
@@ -176,21 +176,21 @@ music.append(('calm', t, None))
 
 # ---------------------------------------------------------------- 13. result board + end
 t = TL.t
-L = d('N14') + 3.2
+L = d('N14') + 2.2
 TL.add(Clip('IMG_3209.MOV', 8.2 + d('N13') + 1.2, min(L, 18.3 - 8.2 - d('N13') - 1.2), fy=0.45, zoom=(1.2, 1.3, 0.5, 0.45),
             hold=max(0, L - (18.3 - 8.2 - d('N13') - 1.2))))
 TL.layer(Blur(t + 0.2, t + L + 1, sigma=16, dark=0.5, fade=0.3))
 say('N14', t + 0.4, sub=False)
 board = rounded_box(900, 760, 40, (255, 255, 255), 238)
-TL.layer(Pop(t + 0.3, t + L, board, W // 2, 900, inn=0.25))
-TL.layer(Pop(t + 0.35, t + L, label_box('本日の交渉結果', 60, bg=(18, 32, 78), padx=40, pady=14), W // 2, 560, inn=0.25))
+TL.layer(Pop(t + 0.15, t + L, board, W // 2, 900, inn=0.2))
+TL.layer(Pop(t + 0.2, t + L, label_box('本日の交渉結果', 60, bg=(18, 32, 78), padx=40, pady=14), W // 2, 560, inn=0.25))
 rows = ['第1交渉　舌ぺろで成立', '第2交渉　おかわり成立', '第3交渉　おすわり成立']
 for k, r in enumerate(rows):
-    tk = t + 0.9 + k * 0.45
+    tk = t + 0.5 + k * 0.4
     TL.layer(Pop(tk, t + L, telop(r, 52, fill=(30, 30, 40), inner=None, outer=None, shadow=0, black=False), W // 2 + 40, 700 + k * 120, style='slide', from_dx=400, inn=0.25))
     TL.layer(Pop(tk + 0.1, t + L, telop('○', 90, fill=(225, 30, 50), inner=None, outer=None, shadow=0), 185, 700 + k * 120, style='stamp', inn=0.15))
     se('pon', tk + 0.1, 0.8)
-tw = t + 0.9 + 3 * 0.45 + 0.25
+tw = t + 0.5 + 3 * 0.4 + 0.2
 TL.layer(Pop(tw, t + L, telop('全戦全勝', 170, maxw=820, fill=((255, 250, 150), (255, 150, 0)), inner=((150, 30, 0), 14), outer=((255, 255, 255), 14)), W // 2, 1110, style='stamp', inn=0.18, rot=-6))
 TL.layer(Flash(tw, 0.25)); se('don', tw, 1.0); se('chime', tw + 0.1, 0.8); se('applause', tw + 0.1, 0.6, d=2.5)
 TL.layer(Pop(t + L - 1.6, t + L + 0.01, telop('次回もお楽しみに！', 80, fill=(255, 255, 255), inner=((215, 25, 45), 10), outer=None), W // 2, 1420, inn=0.25))
@@ -200,7 +200,7 @@ music[-1] = ('calm', music[-1][1], TL.t)
 TL.layer(Static(head_t0, t + 0.3, hdr, 40, 140))
 TL.layer(Static(head_t0, t + 0.3, hdr2, 40 + hdr.shape[1] + 8, 140))
 TL.layer(Static(head_t0, TL.t, note, 44, 140 + hdr.shape[0] + 8))
-TL.layer(Static(0, TL.t, credit, W - credit.shape[1] - 30, 1860 - credit.shape[0], fade=0))
+TL.layer(Static(0, TL.t, credit, W - credit.shape[1] - 36, 146, fade=0))
 
 # ---------------------------------------------------------------- music
 total = TL.t
