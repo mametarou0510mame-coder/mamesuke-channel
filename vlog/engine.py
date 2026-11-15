@@ -16,8 +16,12 @@ HDR_VF = ("zscale=tin=arib-std-b67:min=bt2020nc:pin=bt2020:t=linear:npl=400,form
           "tonemap=mobius:param=0.5,zscale=t=bt709:m=bt709:r=tv,format=yuv420p,")
 
 
-def font(sz, black=True):
-    return ImageFont.truetype(FB if black else FM, sz, index=0)
+FS = "/usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc"
+FSB = "/usr/share/fonts/opentype/noto/NotoSerifCJK-Black.ttc"
+
+
+def font(sz, black=True, face=None):
+    return ImageFont.truetype(face or (FB if black else FM), sz, index=0)
 
 
 def ease_out_back(x, k=1.7):
@@ -63,7 +67,8 @@ class Clip:
             vf += f",setpts=PTS/{self.speed},fps={FPS}"
         else:
             vf += f",fps={FPS}"
-        cmd = ['ffmpeg', '-v', 'error', '-ss', f'{self.ss:.3f}', '-t', f'{self.dur + 0.4:.3f}', '-i', f'{VID}/{self.src}',
+        path = self.src if self.src.startswith('/') else f'{VID}/{self.src}'
+        cmd = ['ffmpeg', '-v', 'error', '-ss', f'{self.ss:.3f}', '-t', f'{self.dur + 0.4:.3f}', '-i', path,
                '-vf', vf, '-an', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-']
         p = subprocess.Popen(cmd, stdout=subprocess.PIPE, bufsize=W * H * 3 * 4)
         last = None
@@ -161,13 +166,13 @@ def text_mask(lines, fnt, spacing=1.12):
 
 
 def telop(text, size=120, fill=((255, 240, 60), (255, 150, 0)), inner=((90, 30, 0), 10), outer=((255, 255, 255), 14),
-          shadow=0.55, black=True, maxw=None, spacing=1.12):
+          shadow=0.55, black=True, maxw=None, spacing=1.12, face=None):
     """Japanese variety-show style caption → RGBA numpy. fill: color or (top, bottom) gradient."""
     lines = text.split('\n')
-    fnt = font(size, black)
+    fnt = font(size, black, face)
     if maxw:
         while max(fnt.getbbox(l)[2] for l in lines) > maxw and size > 30:
-            size -= 4; fnt = font(size, black)
+            size -= 4; fnt = font(size, black, face)
     m = text_mask(lines, fnt, spacing).astype(np.float32) / 255
     ri, ro = (inner[1] if inner else 0), (outer[1] if outer else 0)
     pad = ri + ro + 24
@@ -202,16 +207,16 @@ def telop(text, size=120, fill=((255, 240, 60), (255, 150, 0)), inner=((90, 30, 
     return np.clip(out, 0, 255).astype(np.uint8)
 
 
-def subtitle(text, size=62, maxw=960):
+def subtitle(text, size=62, maxw=960, face=None, inner=((25, 25, 35), 9)):
     """narration subtitle: white text, dark outline, soft shadow; wraps into ≤2 lines"""
-    fnt = font(size, False)
+    fnt = font(size, False, face)
     if fnt.getbbox(text)[2] > maxw:
         # split near the middle at a punctuation mark
         cands = [i for i, c in enumerate(text) if c in '、。！？'] or [len(text) // 2]
         mid = min(cands, key=lambda i: abs(i - len(text) / 2)) + 1
         text = text[:mid] + '\n' + text[mid:]
-    return telop(text.strip('\n'), size, fill=(255, 255, 255), inner=((25, 25, 35), 9), outer=None, shadow=0.7,
-                 black=False, maxw=maxw)
+    return telop(text.strip('\n'), size, fill=(255, 255, 255), inner=inner, outer=None, shadow=0.7,
+                 black=False, maxw=maxw, face=face)
 
 
 def rounded_box(w, h, r, color, alpha=255):
@@ -498,3 +503,35 @@ def mix(total, narr, ses, bgm_track=None, bgm_gain=0.42, duck=0.45, out='mix.wav
 
 def loudnorm(src, dst, I=-14):
     subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', src, '-af', f'loudnorm=I={I}:TP=-1.5:LRA=11', '-ar', '48000', dst], check=True)
+
+
+class Grain(Layer):
+    """film grain + slight flicker for a documentary feel"""
+    pre = True
+
+    def __init__(self, t0, t1, amt=7):
+        super().__init__(t0, t1); rng = np.random.default_rng(3)
+        self.tiles = [rng.normal(0, amt, (H // 2, W // 2, 1)).astype(np.float32) for _ in range(6)]
+
+    def draw(self, f, t):
+        g = cv2.resize(self.tiles[int(t * FPS) % 6], (W, H))[..., None]
+        f[:] = np.clip(f.astype(np.float32) + g, 0, 255).astype(np.uint8)
+
+
+class Chapter(Layer):
+    """documentary chapter card: thin line + serif title sliding in at lower-left"""
+
+    def __init__(self, t0, t1, title, sub='', y=1180):
+        super().__init__(t0, t1); self.y = y
+        self.title = telop(title, 92, fill=(255, 255, 255), inner=None, outer=None, shadow=0.75, face=FSB)
+        self.sub = telop(sub, 38, fill=(235, 235, 235), inner=None, outer=None, shadow=0.7, face=FS) if sub else None
+
+    def draw(self, f, t):
+        u = ease_out((t - self.t0) / 0.6); a = min(1, (t - self.t0) / 0.4, (self.t1 - t) / 0.4)
+        x = 70; y = self.y
+        ln = int(560 * u)
+        if ln > 0:
+            seg = f[y:y + 4, x:x + ln].astype(np.float32); f[y:y + 4, x:x + ln] = (seg * (1 - 0.9 * a) + 255 * 0.9 * a).astype(np.uint8)
+        blend(f, self.title, x - 20 + int(40 * (1 - u)), y - self.title.shape[0] + 14, a)
+        if self.sub is not None:
+            blend(f, self.sub, x - 20 + int(60 * (1 - u)), y + 10, a * 0.95)
