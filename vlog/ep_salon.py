@@ -3,11 +3,11 @@ import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from epkit import *
 
-E = Ep('nichijo_salon', suby=1600); TL = E.TL; d = E.d
+E = Ep('nichijo_salon', suby=1730); TL = E.TL; d = E.d
 OUT = next((a for a in sys.argv[1:] if not a.startswith('--')), "/home/claude/out/まめすけの日常_サロン変身.mp4")
 NAVY, RED, PINK = (18, 32, 78), (215, 25, 45), (255, 110, 160)
 BA = f"{SCR}/assets/comp/beforeafter.mp4"
-IN = 0.80; ICY = 0.46          # inset card scale / centre (cards sit between the top telop and the subtitle)
+IN = 0.72; ICY = 0.465          # inset card scale / centre (cards sit between the top telop and the subtitle)
 
 
 def badge(text, bg):
@@ -97,7 +97,7 @@ TL.layer(Pop(t + 0.35, t + L, badge('AFTER', RED), 556 + 242, 460, style='stamp'
 E.se('pon', t + 0.1, 0.7); E.se('pon', t + 0.35, 0.7)
 E.say('A08', t + 0.4)
 tw = t + 0.4 + d('A08') * 0.62
-E.tel('同じ犬です', tw, t + L, y=1490, size=140, fill=((255, 255, 255), (255, 225, 230)), inner=(RED, 13), style='stamp')
+E.tel('同じ犬です', tw, t + L, y=1520, size=140, fill=((255, 255, 255), (255, 225, 230)), inner=(RED, 13), style='stamp')
 TL.layer(Flash(tw, 0.2, peak=0.5)); E.se('don', tw, 0.8)
 
 # ---------------------------------------------------------------- 9. thanks
@@ -105,8 +105,8 @@ t = TL.t
 L = d('A09') + 2.0
 TL.add(Clip('KDRV4602.MP4', 9.4, min(L, 2.6), hold=max(0, L - 2.6), inset=IN, inset_cy=ICY, zoom=(1.0, 1.08, 0.5, 0.45)))
 E.say('A09', t + 0.3)
-E.tel('トリマーさん\nいつもありがとう', t + 0.5, t + L, y=270, size=86, fill=(255, 255, 255), inner=(PINK, 10), outer=None)
-TL.layer(Pop(t + 0.8, t + L, emoji_img('💐', 120), 900, 1300, wobble=0.05))
+E.tel('トリマーさん\nいつもありがとう', t + 0.5, t + L, y=1380, size=86, fill=(255, 255, 255), inner=(PINK, 10), outer=None)
+TL.layer(Pop(t + 0.8, t + L, emoji_img('💐', 120), 930, 1230, wobble=0.05))
 E.se('chime', t + 0.5, 0.6)
 
 # ---------------------------------------------------------------- persistent graphics
