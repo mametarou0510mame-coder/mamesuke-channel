@@ -32,6 +32,10 @@ def ease_io(x):
     x = min(max(x, 0), 1); return x * x * (3 - 2 * x)
 
 
+def ease_in_c(x):
+    x = min(max(x, 0), 1); return x ** 2.2
+
+
 def ease_out(x):
     x = min(max(x, 0), 1); return 1 - (1 - x) ** 3
 
@@ -43,10 +47,11 @@ class Clip:
     hold: seconds to freeze the last frame, shake: px amplitude, grade: 'warm'|'cool'|'none'."""
 
     def __init__(self, src, ss, dur, speed=1.0, fx=0.5, fy=0.5, z=1.0, zoom=None, hold=0.0, shake=0.0,
-                 grade='warm', blur=0, deshake=False, ramp=None):
+                 grade='warm', blur=0, deshake=False, ramp=None, inset=None, inset_cy=0.47):
         self.src, self.ss, self.dur, self.speed = src, ss, dur, speed
         self.fx, self.fy, self.z, self.zoom, self.hold, self.shake = fx, fy, z, zoom, hold, shake
         self.grade, self.blur, self.deshake, self.ramp = grade, blur, deshake, ramp
+        self.inset, self.inset_cy = inset, inset_cy
         self.n = int(round(dur / speed * FPS)); self.nh = int(round(hold * FPS))
 
     @property
@@ -60,6 +65,8 @@ class Clip:
             vf += 'deshake=rx=24:ry=24,'
         cw = f"min(iw\\,ih*9/16)/{self.z}"; ch = f"min(ih\\,iw*16/9)/{self.z}"
         vf += f"crop={cw}:{ch}:(iw-{cw})*{self.fx}:(ih-{ch})*{self.fy},scale={W}:{H}:flags=lanczos,setsar=1"
+        if meta.get('w', 9999) < 720 or meta.get('h', 9999) < 720:
+            vf += ",hqdn3d=1.5:1.5:3:3,unsharp=7:7:1.1:5:5:0.0"
         if self.speed < 0.999:
             vf += (f",minterpolate=fps={FPS / self.speed:.3f}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1"
                    f",setpts=PTS/{self.speed},fps={FPS}")
@@ -448,6 +455,8 @@ class Timeline:
                 if (whip_in and k < 6) or (whip_out and k >= nc - 6):
                     kk = 61; f = cv2.blur(f, (kk, 3))
                 f = grade(f, clip.grade, sat={'doc': 0.94, 'none': 1.0}.get(clip.grade, 1.12))
+                if clip.inset:
+                    f = inset_frame(f, clip.inset, clip.inset_cy)
                 for l in self.layers:
                     if l.pre and l.active(t): l.draw(f, t)
                 for l in self.layers:
@@ -550,3 +559,60 @@ class Chapter(Layer):
         blend(f, self.title, x - 20 + int(40 * (1 - u)), y - self.title.shape[0] + 14, a)
         if self.sub is not None:
             blend(f, self.sub, x - 20 + int(60 * (1 - u)), y + 10, a * 0.95)
+
+
+class Confetti(Layer):
+    def __init__(self, t0, t1, n=140, seed=5):
+        super().__init__(t0, t1); r = np.random.default_rng(seed)
+        self.p = [(r.uniform(0, W), r.uniform(-H * 0.6, 0), r.uniform(260, 520), r.uniform(-60, 60), r.uniform(0, 6.3), r.uniform(4, 10),
+                   tuple(int(c) for c in r.choice([[255, 70, 90], [255, 210, 40], [60, 200, 255], [120, 230, 120], [255, 140, 220], [255, 255, 255]])),
+                   r.uniform(14, 26)) for _ in range(n)]
+
+    def draw(self, f, t):
+        u = t - self.t0; a = min(1, (self.t1 - t) / 0.4)
+        im = Image.new('RGBA', (W, H), (0, 0, 0, 0)); dr = ImageDraw.Draw(im)
+        for x, y, vy, vx, ph, sp, col, sz in self.p:
+            yy_ = y + vy * u; xx_ = x + vx * u + 30 * math.sin(ph + u * sp)
+            if -40 < yy_ < H + 40:
+                w_ = sz * abs(math.cos(ph + u * sp * 1.3)) + 3
+                dr.rectangle([xx_ - w_ / 2, yy_ - sz * 0.3, xx_ + w_ / 2, yy_ + sz * 0.3], fill=col + (235,))
+        blend(f, np.array(im), 0, 0, a)
+
+
+def judge_cards(scores=('10.0', '10.0', '10.0')):
+    """three judge score cards side by side → RGBA"""
+    cards = []
+    for sc in scores:
+        im = Image.new('RGBA', (250, 200), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
+        d.rounded_rectangle([0, 0, 249, 199], 22, fill=(255, 255, 255, 250), outline=(18, 32, 78, 255), width=8)
+        fnt = font(96); bb = fnt.getbbox(sc)
+        d.text(((250 - bb[2]) // 2, (200 - bb[3]) // 2 - 8), sc, font=fnt, fill=(215, 25, 45))
+        cards.append(np.array(im))
+    return cards
+
+
+_card_mask = {}
+
+
+def inset_frame(f, sc, cy=0.47, border=10, radius=34):
+    """show the frame as a rounded white-bordered card over a blurred, darkened copy of itself"""
+    small = cv2.resize(f, (W // 6, H // 6), interpolation=cv2.INTER_AREA)
+    bg = cv2.resize(cv2.GaussianBlur(small, (0, 0), 6), (W, H)).astype(np.float32) * 0.62
+    cw, ch = int(W * sc), int(H * sc)
+    card = cv2.resize(f, (cw, ch), interpolation=cv2.INTER_AREA)
+    key = (cw, ch)
+    if key not in _card_mask:
+        m = Image.new('L', (cw + 2 * border, ch + 2 * border), 0)
+        ImageDraw.Draw(m).rounded_rectangle([0, 0, cw + 2 * border - 1, ch + 2 * border - 1], radius + border, fill=255)
+        mi = Image.new('L', (cw, ch), 0); ImageDraw.Draw(mi).rounded_rectangle([0, 0, cw - 1, ch - 1], radius, fill=255)
+        sh = cv2.GaussianBlur(np.array(m, np.float32) / 255, (0, 0), 18)
+        _card_mask[key] = (np.array(m, np.float32)[..., None] / 255, np.array(mi, np.float32)[..., None] / 255, sh[..., None])
+    mo, mi, sh = _card_mask[key]
+    x0 = (W - cw) // 2 - border; y0 = int(H * cy - ch / 2) - border
+    hh, ww = mo.shape[:2]
+    reg = bg[y0 + 14:y0 + 14 + hh, x0:x0 + ww]; reg *= (1 - 0.55 * sh[:reg.shape[0], :reg.shape[1]])
+    reg = bg[y0:y0 + hh, x0:x0 + ww]
+    reg[:] = reg * (1 - mo) + 255 * mo
+    inner = bg[y0 + border:y0 + border + ch, x0 + border:x0 + border + cw]
+    inner[:] = inner * (1 - mi) + card.astype(np.float32) * mi
+    return bg.astype(np.uint8)

@@ -321,3 +321,39 @@ if __name__ == '__main__':
     x, st = bgm([('intro', 2), ('tense', 4), ('main', 8), ('calm', 4)])
     print('bgm', len(x) / SR, 's', st, round(time.time() - t0, 1), 's to build')
     write_wav('/tmp/claude-0/-home-claude/f9d7791f-8b10-5d2c-984e-107435ad121f/scratchpad/bgm_test.wav', x)
+
+
+def se_whistle(d=0.55):
+    t = t_(d); f = 2900 + 120 * np.sin(2 * np.pi * 28 * t)
+    x = np.sin(2 * np.pi * np.cumsum(f) / SR) * 0.6 + bp(RNG.standard_normal(len(t)), 2500, 3500) * 0.15
+    return x * np.minimum(t / 0.01, 1) * np.minimum((d - t) / 0.05, 1)
+
+
+def brass(f, d):
+    t = t_(d); ph = 2 * np.pi * f * t
+    x = sum(np.sin(k * ph) / k for k in range(1, 9))
+    return lp(x, 3000) * env(len(t), a=0.03, d=0.8, s=0.6, r=0.08)
+
+
+def se_fanfare():
+    out = np.zeros(int(2.4 * SR)); bt = 0.13
+    for k, (n, l) in enumerate([('C5', 1), ('C5', 1), ('C5', 1), ('G5', 4)]):
+        tt = sum([1, 1, 1, 4][:k]) * bt
+        for m in (0, 4, 7):
+            place(out, brass(hz(n) * 2 ** (m / 12) if l > 1 else hz(n), l * bt * 1.4 + (0.6 if l > 1 else 0)), tt, 0.22 if l > 1 else 0.3)
+    return reverb(out, 1.2, 0.25)
+
+
+def se_boing():
+    t = t_(0.4); f = 180 + 90 * np.sin(2 * np.pi * 9 * t) * np.exp(-t * 4)
+    return np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-t * 6)
+
+
+def se_sparkle_up():
+    out = np.zeros(int(1.6 * SR))
+    for k in range(14):
+        place(out, glock(hz(72 + k * 2), 0.5), k * 0.06, 0.25)
+    return reverb(out, 1.3, 0.35)
+
+
+SE.update({'whistle': se_whistle, 'fanfare': se_fanfare, 'boing': se_boing, 'sparkle_up': se_sparkle_up})
