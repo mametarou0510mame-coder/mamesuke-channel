@@ -1,0 +1,60 @@
+name: Instagram トークン作り直し
+
+# Metaの「トークンを生成」画面が使えないときの代わり。
+# 1) ブラウザで認可URLを開いて「許可」→ 移動先URLの code=... をコピー
+# 2) このワークフローを code を入れて実行 → 60日トークンに交換して IG_ACCESS_TOKEN を自動で書き換える
+on:
+  workflow_dispatch:
+    inputs:
+      code:
+        description: "許可したあとのアドレスバーの code= の後ろ（#_ は付いていても可）"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  exchange:
+    runs-on: ubuntu-latest
+    env:
+      IG_APP_ID: "2958980494455819"
+      REDIRECT_URI: "https://mametarou0510mame-coder.github.io/mamesuke-channel/oauth/"
+      IG_APP_SECRET: ${{ secrets.IG_APP_SECRET }}
+      GH_TOKEN: ${{ secrets.GH_PAT_SECRETS }}
+    steps:
+      - name: コードを隠す
+        run: |
+          CODE=$(jq -r '.inputs.code' "$GITHUB_EVENT_PATH" | sed 's/#_$//; s/^.*code=//; s/[&#].*$//')
+          echo "::add-mask::$CODE"
+          echo "CODE=$CODE" >> $GITHUB_ENV
+      - name: 事前チェック
+        run: |
+          [ -n "$IG_APP_SECRET" ] || { echo "::error::シークレット IG_APP_SECRET が未設定です"; exit 1; }
+          [ -n "$GH_TOKEN" ] || { echo "::error::シークレット GH_PAT_SECRETS が未設定です"; exit 1; }
+      - name: 交換して保存
+        run: |
+          python3 - <<'EOF'
+          import json, os, subprocess, urllib.parse, urllib.request, urllib.error
+          E = os.environ
+          def req(url, data=None):
+              try:
+                  r = urllib.request.urlopen(urllib.request.Request(url, data=urllib.parse.urlencode(data).encode() if data else None), timeout=60)
+                  return json.loads(r.read())
+              except urllib.error.HTTPError as e:
+                  msg = e.read().decode(errors="replace")
+                  for s in (E["CODE"], E["IG_APP_SECRET"]): msg = msg.replace(s, "***")
+                  raise SystemExit(f"API error {e.code}: {msg}")
+          short = req("https://api.instagram.com/oauth/access_token", {
+              "client_id": E["IG_APP_ID"], "client_secret": E["IG_APP_SECRET"], "grant_type": "authorization_code",
+              "redirect_uri": E["REDIRECT_URI"], "code": E["CODE"]})
+          st = short["access_token"]; print(f"::add-mask::{st}")
+          long = req("https://graph.instagram.com/access_token?" + urllib.parse.urlencode({
+              "grant_type": "ig_exchange_token", "client_secret": E["IG_APP_SECRET"], "access_token": st}))
+          lt = long["access_token"]; print(f"::add-mask::{lt}")
+          me = req("https://graph.instagram.com/v23.0/me?" + urllib.parse.urlencode({"fields": "user_id,username", "access_token": lt}))
+          print("アカウント:", me.get("username"), "/ 有効期限(秒):", long.get("expires_in"))
+          if me.get("username") != "mamesukenews":
+              raise SystemExit("::error::mamesukenews 以外のアカウントで許可されています。mamesukenews でログインし直してください")
+          subprocess.run(["gh", "secret", "set", "IG_ACCESS_TOKEN", "--body", lt, "--repo", E["GITHUB_REPOSITORY"]], check=True)
+          print("IG_ACCESS_TOKEN を新しいトークンに差し替えました")
+          EOF
