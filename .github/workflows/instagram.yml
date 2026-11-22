@@ -75,6 +75,7 @@ jobs:
         run: |
           NEW=$(python scripts/ig_post.py --refresh)
           echo "::add-mask::$NEW"
+          export GH_TOKEN=$(printf '%s' "$GH_TOKEN" | tr -d '[:space:]')
           if [ -n "$GH_TOKEN" ]; then
             gh secret set IG_ACCESS_TOKEN --body "$NEW" --repo "${{ github.repository }}" && echo "IG_ACCESS_TOKEN を更新しました"
           else

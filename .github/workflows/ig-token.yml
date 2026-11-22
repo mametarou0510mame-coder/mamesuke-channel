@@ -31,6 +31,10 @@ jobs:
         run: |
           [ -n "$IG_APP_SECRET" ] || { echo "::error::シークレット IG_APP_SECRET が未設定です"; exit 1; }
           [ -n "$GH_TOKEN" ] || { echo "::error::シークレット GH_PAT_SECRETS が未設定です"; exit 1; }
+          T=$(printf '%s' "$GH_TOKEN" | tr -d '[:space:]')
+          code=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $T" https://api.github.com/repos/$GITHUB_REPOSITORY/actions/secrets/public-key)
+          [ "$code" = "200" ] || { echo "::error::GH_PAT_SECRETS が使えません（HTTP $code）。キーを作り直して貼り直してください"; exit 1; }
+          echo "GH_PAT_SECRETS: OK"
       - name: 交換して保存
         run: |
           python3 - <<'EOF'
@@ -55,6 +59,7 @@ jobs:
           print("アカウント:", me.get("username"), "/ 有効期限(秒):", long.get("expires_in"))
           if me.get("username") != "mamesukenews":
               raise SystemExit("::error::mamesukenews 以外のアカウントで許可されています。mamesukenews でログインし直してください")
-          subprocess.run(["gh", "secret", "set", "IG_ACCESS_TOKEN", "--body", lt, "--repo", E["GITHUB_REPOSITORY"]], check=True)
+          env = dict(E, GH_TOKEN="".join(E["GH_TOKEN"].split()))
+          subprocess.run(["gh", "secret", "set", "IG_ACCESS_TOKEN", "--body", lt, "--repo", E["GITHUB_REPOSITORY"]], check=True, env=env)
           print("IG_ACCESS_TOKEN を新しいトークンに差し替えました")
           EOF
