@@ -3,6 +3,9 @@ name: Instagram (リール自動投稿)
 on:
   schedule:
     - cron: "17 * * * *"          # 毎時17分に、公開時刻を過ぎた投稿をチェック
+    - cron: "4 11 * * *"          # 20:04 JST（毎日の公開時刻のすぐ後。GitHubの定期実行が遅れがちなので念のため複数回）
+    - cron: "24 11 * * *"         # 20:24 JST
+    - cron: "44 11 * * *"         # 20:44 JST
     - cron: "41 3 1,15 * *"       # 月2回、長期トークンを更新
   workflow_dispatch:
     inputs:
